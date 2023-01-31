@@ -148,12 +148,28 @@ def play_responses(cassette, vcr_request, kwargs):
 
     return response
 
+def _unread_data(response, data: bytes) -> None:
+    """rollback reading some data from stream, inserting it to buffer head."""
+    if not data:
+        return
+
+    if response.content._buffer_offset:
+        response.content._buffer[0] = response.content._buffer[0][response.content._buffer_offset :]
+        response.content._buffer_offset = 0
+    response.content._size += len(data)
+    response.content._cursor -= len(data)
+    response.content._buffer.appendleft(data)
+    response.content._eof_counter = 0
+
 
 async def record_response(cassette, vcr_request, response):
     """Record a VCR request-response chain to the cassette."""
 
     try:
-        body = {"string": (await response.read())}
+        byte_response = await response.read()
+        body = {"string": (byte_response)}
+        _unread_data(response, byte_response)
+        
     # aiohttp raises a ClientConnectionError on reads when
     # there is no body. We can use this to know to not write one.
     except ClientConnectionError:
