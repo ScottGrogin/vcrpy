@@ -18,7 +18,8 @@ log = logging.getLogger(__name__)
 
 
 class MockStream(asyncio.StreamReader, streams.AsyncStreamReaderMixin):
-    pass
+    def unread_data(self,byte_data):
+        pass
 
 
 class MockClientResponse(ClientResponse):
